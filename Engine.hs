@@ -1,4 +1,5 @@
-module Engine where
+module Engine (Resolution, Scene(Scene), Color, Camera(Camera), Texture(Texture), TexturedObject,
+               Light(PointLight), Diff(Solid), rayTrace) where
 
 import Data.Maybe
 import Math
@@ -93,24 +94,24 @@ refractPt depth i d b =
 
 colorPt :: Int -> Ray -> Color -> [TexturedObject] -> [Light] -> Color
 colorPt (-1) _ _ _ _ = (0.0, 0.0, 0.0)
-colorPt d r@(Ray _ dir) b o l = if (isNothing i) then b else clip $ shadeColor <+> reflectColor <+> refractColor
+colorPt depth r@(Ray _ dir) b o l = if (isNothing i) then b else clip $ shadeColor <+> reflectColor <+> refractColor
   where
     shadeColor = foldl (<+>) (0.0,0.0,0.0) (map (shadePt (fromJust i) dir o) l)
     reflectColor =
       if (reflCoef == 0.0) then
         (0.0, 0.0, 0.0)
       else (
-        reflectPt (d-1) (fromJust i) dir o l) *> reflCoef
+        reflectPt (depth-1) (fromJust i) dir o l) *> reflCoef
     refractColor =
       if (refrCoef == 0.0) then
         (0.0, 0.0, 0.0)
       else
-        (refractPt (d-1) (fromJust i) dir b o l) *> refrCoef
+        (refractPt (depth-1) (fromJust i) dir b o l) *> refrCoef
     i = intersect r o
     (Texture _ reflCoef _ refrCoef _) = intText i
 
 rayTracePt :: Int -> Scene -> Point3D -> Color
-rayTracePt d (Scene (Camera eye _) b o l) p = colorPt d (Ray p (mkNormVect eye p)) b o l
+rayTracePt depth (Scene (Camera eye _) b o l) p = colorPt depth (Ray p (mkNormVect eye p)) b o l
 
 rayTrace :: Int -> Resolution -> Scene -> Image
-rayTrace d r s@(Scene (Camera _ dim) _ _ _) = (rayTracePt d s) . (mapToWindow r dim)
+rayTrace depth r s@(Scene (Camera _ dim) _ _ _) = (rayTracePt depth s) . (mapToWindow r dim)
